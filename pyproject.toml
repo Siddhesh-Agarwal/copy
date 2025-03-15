@@ -1,0 +1,11 @@
+[project]
+authors = [
+    { name = "Siddhesh Agarwal", email = "siddhesh.agarwal@gmail.com" }
+]
+name = "copy"
+version = "0.1.0"
+description = "A CLI tool to download files from websites"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["bs4>=0.0.2", "requests>=2.32.3", "typer>=0.15.2"]
+scripts = { main = "main.py" }
