@@ -7,12 +7,14 @@ import os
 import re
 from queue import Queue
 from typing import Optional
+from rich.console import Console
 
 app = typer.Typer(
     name="copy",
     no_args_is_help=True,
     help="Website crawler that downloads all resources recursively",
 )
+console = Console()
 
 
 def is_valid(url: str):
@@ -24,7 +26,7 @@ def should_download(url: str, base_domain: str):
     return urlparse(url).netloc == base_domain
 
 
-def save_resource(response, output_dir, domain, url):
+def save_resource(response: requests.Response, output_dir: str, domain: str, url: str):
     parsed = urlparse(url)
     path = parsed.path
 
@@ -60,7 +62,7 @@ def extract_html_links(content, base_url):
             if isinstance(attrs, list):
                 for attr in attrs:
                     if isinstance(element, Tag) and (value := element.get(attr)):
-                        links.extend([v.split()[0] for v in value.split(",")])
+                        links.extend([v.split(maxsplit=1)[0] for v in value.split(",")])
             else:
                 if isinstance(element, Tag) and (value := element.get(attrs)):
                     links.append(value)
@@ -99,17 +101,19 @@ def crawl(
     try:
         # Create output directory if needed
         output_dir.mkdir(parents=True, exist_ok=True)
+        if max_depth is not None and max_depth < 0:
+            max_depth = None
 
         if verbose:
-            typer.echo(f"Starting crawl of {url}")
-            typer.echo(f"Saving files to: {output_dir.resolve()}")
+            console.print(f"Starting crawl of {url}")
+            console.print(f"Saving files to: {output_dir.resolve()}")
 
         # Resolve initial redirects
         response = requests.get(
             url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True
         )
         if response.status_code != 200:
-            typer.echo(f"Error: Initial URL returned {response.status_code}", err=True)
+            console.print(f"[red bold]Error: Initial URL returned {response.status_code}[/]")
             raise typer.Exit(code=1)
 
         base_url = response.url
@@ -123,7 +127,7 @@ def crawl(
 
             if max_depth is not None and depth > max_depth:
                 if verbose:
-                    typer.echo(f"Skipping {url} (max depth reached)")
+                    console.print(f"Skipping {url} (max depth reached)")
                 continue
 
             if url in visited:
@@ -131,17 +135,18 @@ def crawl(
             visited.add(url)
 
             if verbose:
-                typer.echo(f"Downloading: {url}")
+                console.print(f"Downloading: {url}")
 
             try:
                 response = requests.get(
                     url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True
                 )
             except Exception as e:
-                typer.echo(f"Error downloading {url}: {e}", err=True)
+                console.print(f"[red]Error downloading {url}: {e}[/]")
                 continue
 
             if response.status_code != 200:
+                console.print(f"[red]Skipping {url} (status code {response.status_code})...[/]")
                 continue
 
             final_url = response.url
@@ -152,7 +157,7 @@ def crawl(
                 response, str(output_dir), base_domain, final_url
             )
             if verbose:
-                typer.echo(f"Saved: {saved_path}")
+                console.print(f"[green]Saved: {saved_path}[/]")
 
             content_type = (
                 response.headers.get("Content-Type", "").split(";")[0].strip()
@@ -163,12 +168,12 @@ def crawl(
                 try:
                     links = extract_html_links(response.content, final_url)
                 except Exception as e:
-                    typer.echo(f"HTML parsing error: {e}", err=True)
+                    console.print(f"[red]HTML parsing error: {e}[/]")
             elif content_type == "text/css":
                 try:
                     links = extract_css_links(response.text, final_url)
                 except Exception as e:
-                    typer.echo(f"CSS parsing error: {e}", err=True)
+                    console.print(f"[red]CSS parsing error: {e}[/]")
 
             for link in links:
                 parsed = urlparse(link)
@@ -180,7 +185,7 @@ def crawl(
                         queue.put((clean_url, depth + 1))
 
     except Exception as e:
-        typer.echo(f"Critical error: {e}", err=True)
+        console.print(f"[red bold]Critical error: {e}[/]")
         raise typer.Exit(code=1)
 
 
