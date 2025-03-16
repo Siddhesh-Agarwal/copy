@@ -1,12 +1,13 @@
-import typer
-from pathlib import Path
-import requests
-from bs4 import BeautifulSoup, Tag
-from urllib.parse import urljoin, urlparse, urlunparse
 import os
 import re
+from pathlib import Path
 from queue import Queue
 from typing import Optional
+from urllib.parse import urljoin, urlparse, urlunparse
+
+import requests
+import typer
+from bs4 import BeautifulSoup, Tag
 from rich.console import Console
 
 app = typer.Typer(
@@ -62,10 +63,10 @@ def extract_html_links(content, base_url):
             if isinstance(attrs, list):
                 for attr in attrs:
                     if isinstance(element, Tag) and (value := element.get(attr)):
-                        links.extend([v.split(maxsplit=1)[0] for v in value.split(",")])
-            else:
-                if isinstance(element, Tag) and (value := element.get(attrs)):
-                    links.append(value)
+                        if isinstance(value, str):
+                            links.extend([v.split(maxsplit=1)[0] for v in value.split(",")])
+            elif isinstance(element, Tag) and (value := element.get(attrs)):
+                links.append(value)
 
     return [urljoin(base_url, link) for link in links]
 
@@ -89,14 +90,13 @@ def crawl(
         resolve_path=True,
     ),
     max_depth: Optional[int] = typer.Option(
-        None, "--max-depth", "-d", help="Maximum recursion depth (default: unlimited)"
+        None, "--max-depth", "-d", help="Maximum recursion depth (default: unlimited)",
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show detailed progress information"
+        False, "--verbose", "-v", help="Show detailed progress information",
     ),
 ):
-    """
-    Recursively download all resources from a website
+    """Recursively download all resources from a website
     """
     try:
         # Create output directory if needed
@@ -110,7 +110,7 @@ def crawl(
 
         # Resolve initial redirects
         response = requests.get(
-            url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True
+            url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True,
         )
         if response.status_code != 200:
             console.print(f"[red bold]Error: Initial URL returned {response.status_code}[/]")
@@ -139,7 +139,7 @@ def crawl(
 
             try:
                 response = requests.get(
-                    url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True
+                    url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True,
                 )
             except Exception as e:
                 console.print(f"[red]Error downloading {url}: {e}[/]")
@@ -154,7 +154,7 @@ def crawl(
                 continue
 
             saved_path = save_resource(
-                response, str(output_dir), base_domain, final_url
+                response, str(output_dir), base_domain, final_url,
             )
             if verbose:
                 console.print(f"[green]Saved: {saved_path}[/]")
