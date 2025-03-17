@@ -141,16 +141,15 @@ def crawl(
                 response = requests.get(
                     url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True,
                 )
+                response.raise_for_status()
             except Exception as e:
                 console.print(f"[red]Error downloading {url}: {e}[/]")
                 continue
 
-            if response.status_code != 200:
-                console.print(f"[red]Skipping {url} (status code {response.status_code})...[/]")
-                continue
-
             final_url = response.url
             if not should_download(final_url, base_domain):
+                if verbose:
+                    console.print("[red]Skipping {url} (not a supported resource type)…[/]")
                 continue
 
             saved_path = save_resource(
