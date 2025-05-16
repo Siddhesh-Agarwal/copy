@@ -20,6 +20,4 @@ To install the `copy` CLI tool, you can use the following command:
 git clone https://github.com/siddheshagarwal/copy.git
 cd copy
 uv run main.py
-``
-
-
+```
