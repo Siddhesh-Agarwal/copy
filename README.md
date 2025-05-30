@@ -1,5 +1,7 @@
 # Copy CLI Tool
 
+A CLI Tool to download all pages and resources of a website
+
 ## Overview
 
 The `copy` CLI tool is designed to download all the resources of a website recursively. This tool is useful for creating local copies of websites for offline use, archiving purposes, or for analyzing website content.
